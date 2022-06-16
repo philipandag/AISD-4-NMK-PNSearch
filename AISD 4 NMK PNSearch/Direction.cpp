@@ -56,3 +56,8 @@ bool Direction::operator<(Directions d) const
 {
 	return this->dir < d;
 }
+
+bool Direction::operator<=(Directions d) const
+{
+	return this->dir < d || this->dir == d;
+}

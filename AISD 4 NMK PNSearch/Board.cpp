@@ -1,5 +1,6 @@
 #include "Board.h"
 
+
 Board::Board(int n, int m, int k, Field player):
 	n(n), m(m), k(k), player(player), fields(createFields(n, m)), emptyFields(0)
 {}
@@ -7,6 +8,14 @@ Board::Board(int n, int m, int k, Field player):
 Board::Board():
 	n(0), m(0), k(0), player(Field::EMPTY), fields(nullptr), emptyFields(0)
 {}
+
+Board::Board(Board& b):
+	n(b.n), m(b.n), k(b.k), player(b.player), fields(createFields(n, m)), emptyFields(b.emptyFields)
+{
+	for (int y = 0; y < b.n; y++)
+		for (int x = 0; x < b.m; x++)
+			fields[y][x] = b.fields[y][x];
+}
 
 Field Board::checkWin()
 {
@@ -31,6 +40,17 @@ Field Board::checkWinAt(Point pos)
 		if (countInDirection(pos, d.getP()) >= k)
 			 return at(pos);
 
+	return Field::EMPTY;
+}
+
+Field Board::checkWinAround(Point pos)
+{
+	if ((*this)[pos] == Field::EMPTY)
+		return Field::EMPTY;
+	Direction d = Direction::N;
+	for (int i = 0; i < Direction::DIRECTIONS_AMOUNT; ++d, ++i)
+		if (countInDirection(pos, d.getP()) >= k)
+			return at(pos);
 	return Field::EMPTY;
 }
 
@@ -173,24 +193,24 @@ void Board::solveGame()
 	printf_s("%s\n", RESULTS[fieldToSymbol(result)]);
 }
 
+void Board::solveGamePNS()
+{
+	Field result = PNSearchSolve();
+	printf_s("%s\n", RESULTS[fieldToSymbol(result)]);
+}
+
 Board& Board::set(Point p, Field value)
 {
-	if ((*this)[p] != value)
+	if (at(p) != value)
 	{
 		if (value == Field::EMPTY)
 			emptyFields++;
 		else
 			emptyFields--;
 	}
-	(*this)[p] = value;
+	at(p) = value;
 
 	return *this;
-}
-
-Field Board::PNSearchSolveGame()
-{
-	PNSearchTree pnst(this);
-
 }
 
 
@@ -328,4 +348,306 @@ void Board::print()
 		printf_s("\n");
 	}
 	printf_s("\n");
+}
+
+
+//#####################################################        PNS        #############################################################
+
+
+Field Board::PNSearchSolve()
+{
+	Field playerCopy = player;
+	PNSearchNode root(this);
+	root.player = getOtherPlayer(player);
+	PN(&root);
+	if (root.proof == 0)
+		return playerCopy;
+	else
+	{
+		/*
+		player = playerCopy; // after PN the player tends to change, so lets bring the initial one back
+		if (PNDraw(&root))
+			return Field::EMPTY;
+		else
+			return getOtherPlayer(player);
+			*/
+	}
+	return Field::EMPTY;
+}
+
+
+PNSearchNode::PNSearchNode(Board* boardPointer, int x, int y)
+{
+	board = boardPointer;
+	maxNodes = board->emptyFields;
+	expanded = false;
+	parent = nullptr;
+	value = Unknown;
+	proof = 1;
+	disproof = 1;
+	childrenAmount = 0;
+	children = new PNSearchNode*[maxNodes];
+	for (int i = 0; i < maxNodes; i++)
+		children[i] = nullptr;
+	changeX = x;
+	changeY = y;
+	type = OR_NODE;
+
+}
+
+void PNSearchNode::deleteSubtree() {
+	for (int i = 0; i < childrenAmount; i++)
+		delete children[i];
+	delete children;
+	childrenAmount = 0;
+}
+
+PNSearchNode::~PNSearchNode()
+{
+	deleteSubtree();
+}
+
+void PNSearchNode::set() 
+{
+	if (changeX != -1 && changeY != -1)
+	{
+		board->set({ changeX, changeY }, player);
+		board->player = getOtherPlayer(player);
+	}
+
+}
+
+void PNSearchNode::unset()
+{
+	if (changeX != -1 && changeY != -1)
+	{
+		board->set({ changeX, changeY }, Field::EMPTY);
+		board->player = getOtherPlayer(player);
+	}
+
+}
+
+void evaluate(PNSearchNode* node)
+{
+	Field result;
+	if (node->parent == nullptr)
+	{
+		if (node->changeX != -1 && node->changeY != -1)
+			result = node->board->checkWinAround({ node->changeX, node->changeY });
+		else
+			result = node->board->checkWin();
+
+		if (result == Field::EMPTY)
+			result = node->board->checkWinningSituations();
+		if (result == node->board->player)
+		{
+				node->value = Win;
+
+		}
+		else if (result == getOtherPlayer(node->board->player))
+		{
+
+				node->value = Lose;
+
+		}
+	}
+	else
+	{
+		result = node->board->checkWin();
+		if (result == Field::EMPTY)
+			result = node->board->checkWinningSituations();
+
+		if (result == node->board->player)
+		{
+
+				node->value = Lose;
+
+		}
+		else if (result == getOtherPlayer(node->board->player))
+		{
+
+				node->value = Win;
+
+		}
+	}
+
+
+	if (result == Field::EMPTY)
+	{
+		if (node->board->emptyFields <= 1)
+			node->value = Draw;
+		else
+			node->value = Unknown;
+	}
+	
+}
+
+void PN(PNSearchNode* root) { // P1 wins
+	evaluate(root);
+	setProofAndDisproofNumbers(root);
+	PNSearchNode* currentNode = root;
+	PNSearchNode* mostProvingNode;
+	while (root->proof != 0 && root->disproof != 0) {
+		mostProvingNode = selectMostProvingNode(currentNode);
+		expandNode(mostProvingNode);
+		currentNode = updateAncestors(mostProvingNode, root);
+	}
+}
+
+void generateAllChildren(PNSearchNode* node)
+{
+	int i = 0;
+	PNSearchNode* previous = nullptr;
+	for (int y = 0; y < node->board->n; y++)
+		for (int x = 0; x < node->board->m; x++)
+		{
+			if (empty(node->board->at({ x, y })))
+			{
+				node->children[i] = new PNSearchNode(node->board, x, y);
+				node->children[i]->maxNodes -= 1;
+				node->children[i]->parent = node;
+				node->children[i]->player = getOtherPlayer(node->player);
+				node->children[i]->type = node->type == OR_NODE ? AND_NODE : OR_NODE;
+				i++;
+			}
+		}
+	node->childrenAmount = i;
+}
+
+void setProofAndDisproofNumbers(PNSearchNode* node) {
+	if (node->expanded) //Internal node;
+		if (node->type == AND_NODE) {
+			node->proof = 0;
+			node->disproof = PN_MAX_VALUE;
+			for (int i = 0; i < node->childrenAmount; i++) {
+				PNSearchNode* n = node->children[i];
+				node->proof = node->proof + n->proof <= PN_MAX_VALUE ? node->proof + n->proof : PN_MAX_VALUE;
+				if (n->disproof < node->disproof)
+					node->disproof = n->disproof;
+			}
+		}
+		else { //OR node
+			node->proof = PN_MAX_VALUE;
+			node->disproof = 0;
+			for (int i = 0; i < node->childrenAmount; i++) {
+				PNSearchNode* n = node->children[i];
+				node->disproof = node->disproof + n->disproof <= PN_MAX_VALUE ? node->disproof + n->disproof : PN_MAX_VALUE;
+				if (n->proof < node->proof)
+					node->proof = n->proof;
+			}
+		}
+	else //Leaf
+		switch (node->value) {
+		case Lose:
+		case Draw:
+			node->proof = PN_MAX_VALUE;
+			node->disproof = PN_MIN_VALUE;
+			break;
+		case Win:
+			node->proof = PN_MIN_VALUE;
+			node->disproof = PN_MAX_VALUE;
+			break;
+		case Unknown:
+			node->proof = 1;
+			node->disproof = 1;
+		}
+}
+
+PNSearchNode* selectMostProvingNode(PNSearchNode* node) {
+	node->set();
+	while (node->expanded) {
+		int i = 0;
+		PNSearchNode* n = node->children[i++];
+		if (node->type == OR_NODE) //OR Node
+		{
+			while (n->proof != node->proof)
+				n = node->children[i++];
+		}
+		else //AND Node
+		{
+			while (n->disproof != node->disproof)
+				n = node->children[i++];
+		}
+		node = n;
+		node->set();
+	}
+
+	return node;
+}
+
+void expandNode(PNSearchNode* node) {
+	generateAllChildren(node);
+	for (int i = 0; i < node->childrenAmount; i++) {
+		PNSearchNode* n = node->children[i];
+		evaluate(n);
+		setProofAndDisproofNumbers(n);
+		//Addition to original code
+		if ((node->type == OR_NODE && n->proof == 0) ||
+			(node->type == AND_NODE && n->disproof == 0))
+			break;
+	}
+	node->expanded = true;
+}
+
+PNSearchNode* updateAncestors(PNSearchNode* node, PNSearchNode* root) {
+	do {
+		int oldProof = node->proof;
+		int oldDisProof = node->disproof;
+
+		setProofAndDisproofNumbers(node);
+
+		//No change on the path
+		if (node->proof == oldProof && node->disproof == oldDisProof)
+			return node;
+
+		//Delete (dis)proved trees
+		//if (node->proof == 0 || node->disproof == 0)
+			//node->deleteSubtree();
+
+		if (node == root)
+			return node;
+
+		node->unset();
+		node = node->parent;
+	} while (true);
+}
+
+bool PNDraw(PNSearchNode* root)
+{
+
+
+	/*
+	PNSearchNode* current = root;
+	while (true)
+	{
+		if (current->childrenAmount == 0)
+			if (current->board->checkWin() == Field::EMPTY || current->board->checkWinningSituations() == Field::EMPTY)
+				return true;
+			else
+				return false;
+		PNSearchNode* bestChild = current->children[0];
+		if (current->type == OR_NODE)
+		{
+			for (int i = 0; i < current->childrenAmount; i++)
+			{
+				if(current->children[0]->proof != 0)
+					if (PNDraw(current->children[0]))
+						return true;
+			}
+			return false;
+		}
+		else
+		{
+			for (int i = 0; i < current->childrenAmount; i++)
+			{
+				if (current->children[0]->proof != 0)
+					if (!PNDraw(current->children[0]))
+						return false;
+			}
+			return true;
+		}
+
+	}
+	*/
+	return false;
 }

@@ -30,4 +30,5 @@ public:
 	int getDY() const;
 	Direction& operator=(Directions d);
 	bool operator<(Directions d) const;
+	bool operator<=(Directions d) const;
 };
