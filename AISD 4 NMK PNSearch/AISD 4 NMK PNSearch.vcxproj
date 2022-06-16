@@ -139,9 +139,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AbstractBoard.h" />
     <ClInclude Include="Board.h" />
     <ClInclude Include="Direction.h" />
     <ClInclude Include="Field.h" />
+    <ClInclude Include="PNSearcher.h" />
     <ClInclude Include="PNSearchTree.h" />
     <ClInclude Include="Point.h" />
   </ItemGroup>
@@ -150,6 +152,7 @@
     <ClCompile Include="Direction.cpp" />
     <ClCompile Include="Field.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="PNSearcher.cpp" />
     <ClCompile Include="PNSearchTree.cpp" />
     <ClCompile Include="Point.cpp" />
   </ItemGroup>

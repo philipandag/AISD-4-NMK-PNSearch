@@ -1,11 +1,9 @@
 #pragma once
-#include "Field.h"
-
-const int PN_MAX_VALUE = 100000;
-const int PN_MIN_VALUE = 0;
+#include "AbstractBoard.h"
+#include "PNSearcher.h"
 
 
-class Board
+class Board : AbstractBoard
 {
 public:
 	int n, m, k;
@@ -44,48 +42,10 @@ public:
 	void solveGamePNS();
 	bool doesP1Win();
 	bool doesP2Win();
+	int getEmptyFields() override;
+	void changePlayer() override;
+	int getN() override;
+	int getM() override;
+	Field getPlayer() override;
+	void setPlayer(Field player) override;
 };
-
-enum NodeTypes {
-	AND_NODE,
-	OR_NODE
-};
-
-enum NodeValues {
-	Win,
-	Lose,
-	Draw,
-	Unknown
-};
-
-struct PNSearchNode {
-	Board* board;
-	int maxNodes;
-	NodeTypes type;
-	bool expanded;
-	PNSearchNode* parent;
-	PNSearchNode* sibling;
-	NodeValues value;
-	int proof;
-	int disproof;
-	int childrenAmount;
-	PNSearchNode** children;
-	int changeX;
-	int changeY;
-	Field player;
-
-	PNSearchNode(Board* board, int x = -1, int y = -1);
-	~PNSearchNode();
-	void deleteSubtree();
-	void set();
-	void unset();
-};
-
-PNSearchNode* updateAncestors(PNSearchNode* node, PNSearchNode* root);
-void expandNode(PNSearchNode* node);
-PNSearchNode* selectMostProvingNode(PNSearchNode* node);
-void setProofAndDisproofNumbers(PNSearchNode* node);
-void generateAllChildren(PNSearchNode* node);
-void PN(PNSearchNode* root);
-void evaluate(PNSearchNode* node);
-bool PNDraw(PNSearchNode* root);

@@ -30,6 +30,12 @@
     <ClInclude Include="PNSearchTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AbstractBoard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PNSearcher.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Board.cpp">
@@ -48,6 +54,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Direction.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PNSearcher.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
