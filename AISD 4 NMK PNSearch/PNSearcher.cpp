@@ -40,7 +40,7 @@ void PNSearcher::PN() { // P1 wins
 
 void PNSearcher::evaluate(PNSearcher::PNSearchNode* node)
 {
-	Field result;
+	Field result = Field::EMPTY;
 	
 	if (node->changeX != -1 && node->changeY != -1)
 	{
@@ -51,8 +51,9 @@ void PNSearcher::evaluate(PNSearcher::PNSearchNode* node)
 	}
 	else
 	{
-		node->board->updateAllWinningSituations(*node->threats);
 		result = node->board->checkWin();
+		if (result == Field::EMPTY)
+			node->board->updateAllWinningSituations(*node->threats);
 	}
 
 	if (result == Field::EMPTY)
@@ -196,11 +197,21 @@ void PNSearcher::generateAllChildren(PNSearcher::PNSearchNode* node)
 	{
 		length = node->threats->getLengthP1();
 		current = node->threats->getRootP1();
+		if (length == 0)
+		{
+			length = node->threats->getLengthP2();
+			current = node->threats->getRootP2();
+		}
 	}
 	else if (node->player == Field::P2)
 	{
 		length = node->threats->getLengthP2();
 		current = node->threats->getRootP2();
+		if (length == 0)
+		{
+			length = node->threats->getLengthP1();
+			current = node->threats->getRootP1();
+		}
 	}
 	if (length > 0)
 	{

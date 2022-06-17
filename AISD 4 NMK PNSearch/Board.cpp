@@ -1,5 +1,5 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "Board.h"
-
 
 Board::Board(int n, int m, int k, Field player):
 	n(n), m(m), k(k), player(player), fields(createFields(n, m)), emptyFields(0)
@@ -88,7 +88,7 @@ Board& Board::read()
 	if (fields != nullptr)
 		deleteFields();
 	int playerSym;
-	scanf_s("%d %d %d %d", &n, &m, &k, &playerSym);
+	scanf("%d %d %d %d", &n, &m, &k, &playerSym);
 	player = symbolToField(playerSym);
 
 	fields = createFields(n, m);
@@ -98,7 +98,7 @@ Board& Board::read()
 	for (int y = 0; y < n; y++)
 		for (int x = 0; x < m; x++)
 		{
-			scanf_s("%d", &f);
+			scanf("%d", &f);
 			fields[y][x] = symbolToField(f);
 			if (empty(fields[y][x]))
 				emptyFields++;
@@ -320,10 +320,10 @@ void Board::updateWinningSituationsAt(Point pos, Threats& threats)
 			if (empty2.x != -1 && empty2.y != -1)
 				threats.add(new Threat(empty2, at(pos)));
 		}
-		if(1 + length1 + lengthAfterEmpty1 == (k-1))
+		if(1 + length2 + length1 + lengthAfterEmpty1 >= (k-1))
 			if (empty1.x != -1 && empty1.y != -1)
 				threats.add(new Threat(empty1, at(pos)));
-		if(1  + length2 + lengthAfterEmpty2 == (k-1))
+		if(1  + length1 + length2 + lengthAfterEmpty2 >= (k-1))
 			if (empty2.x != -1 && empty2.y != -1)
 				threats.add(new Threat(empty2, at(pos)));
 		
