@@ -15,5 +15,6 @@ public:
 	Point operator-() const;
 	Point operator*(int multiplier) const;
 	bool operator==(const Point& other) const;
+	bool operator!=(const Point& other) const;
 };
 

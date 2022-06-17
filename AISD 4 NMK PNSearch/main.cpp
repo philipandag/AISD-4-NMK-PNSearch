@@ -26,13 +26,18 @@ int main()
 			Board board;
 			board.read();
 			board.solveGamePNS();
-
 		}
 		else if (strcmp(command, "PNS") == 0)
 		{
 			Board board;
 			board.read();
 			board.solveGamePNS();
+		}
+		else if (strcmp(command, "MM") == 0)
+		{
+			Board board;
+			board.read();
+			board.solveGame();
 		}
 
 	}

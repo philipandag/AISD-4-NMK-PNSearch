@@ -6,10 +6,15 @@ PNSearcher::PNSearcher(AbstractBoard* board) {
 	firstPlayer = board->getPlayer();
 }
 
+PNSearcher::~PNSearcher()
+{
+	delete root;
+}
+
 Field PNSearcher::solve()
 {
 	root->player = getOtherPlayer(firstPlayer);
-	PN(root);
+	PN();
 	if (root->proof == 0)
 		return firstPlayer;
 	else
@@ -22,28 +27,37 @@ Field PNSearcher::solve()
 	}
 }
 
-void PNSearcher::PN(PNSearcher::PNSearchNode* root) { // P1 wins
+void PNSearcher::PN() { // P1 wins
 	evaluate(root);
 	setProofAndDisproofNumbers(root);
 	PNSearchNode* currentNode = root;
 	while (root->proof != 0 && root->disproof != 0) {
 		PNSearchNode* mostProvingNode = selectMostProvingNode(currentNode);
 		expandNode(mostProvingNode);
-		currentNode = updateAncestors(mostProvingNode, root);
+		currentNode = updateAncestors(mostProvingNode);
 	}
 }
 
 void PNSearcher::evaluate(PNSearcher::PNSearchNode* node)
 {
 	Field result;
-
+	
 	if (node->changeX != -1 && node->changeY != -1)
-		result = node->board->checkWinAround({ node->changeX, node->changeY });
+	{
+		Point pos = { node->changeX, node->changeY };
+		node->threats->remove(pos);
+		node->board->updateWinningSituationsAt(pos, *node->threats);
+		result = node->board->checkWinAround(pos);
+	}
 	else
+	{
+		node->board->updateAllWinningSituations(*node->threats);
 		result = node->board->checkWin();
+	}
 
 	if (result == Field::EMPTY)
-		result = node->board->checkWinningSituations();
+		result = node->board->checkWinningSituationsSmart(getOtherPlayer(node->player), *node->threats);
+
 	if (result == firstPlayer)
 	{
 		node->value = Win;
@@ -55,7 +69,7 @@ void PNSearcher::evaluate(PNSearcher::PNSearchNode* node)
 
 	if (result == Field::EMPTY)
 	{
-		if (node->board->getEmptyFields() == 0)
+		if (node->board->getEmptyFields() <= 1)
 			node->value = Draw;
 		else
 			node->value = Unknown;
@@ -115,12 +129,13 @@ void PNSearcher::setProofAndDisproofNumbers(PNSearcher::PNSearchNode* node) {
 		case Unknown:
 			node->proof = 1;
 			node->disproof = 1;
+			break;
 		}
 }
 
-bool PNSearcher::PNDraw(PNSearcher::PNSearchNode* root)
+bool PNSearcher::PNDraw(PNSearcher::PNSearchNode* node)
 {
-	PNSearchNode* current = root;
+	PNSearchNode* current = node;
 	while (true)
 	{
 		if (current->childrenAmount == 0)
@@ -175,8 +190,37 @@ bool PNSearcher::PNDraw(PNSearcher::PNSearchNode* root)
 
 void PNSearcher::generateAllChildren(PNSearcher::PNSearchNode* node)
 {
+	int length = 0;
+	Threat* current = nullptr;
+	if (node->player == Field::P1)
+	{
+		length = node->threats->getLengthP1();
+		current = node->threats->getRootP1();
+	}
+	else if (node->player == Field::P2)
+	{
+		length = node->threats->getLengthP2();
+		current = node->threats->getRootP2();
+	}
+	if (length > 0)
+	{
+		node->childrenAmount = length;
+		int i = 0;
+		while (i < length)
+		{
+			node->children[i] = new PNSearchNode(node->board, current->pos.x, current->pos.y);
+			node->children[i]->maxNodes -= 1;
+			node->children[i]->parent = node;
+			node->children[i]->player = getOtherPlayer(node->player);
+			node->children[i]->type = node->type == OR_NODE ? AND_NODE : OR_NODE;
+			node->children[i]->threats = new Threats(*node->threats);
+			current = current->next;
+			i++;
+		}
+		return;
+	}
+
 	int i = 0;
-	PNSearchNode* previous = nullptr;
 	for (int y = 0; y < node->board->getN(); y++)
 		for (int x = 0; x < node->board->getM(); x++)
 		{
@@ -187,6 +231,7 @@ void PNSearcher::generateAllChildren(PNSearcher::PNSearchNode* node)
 				node->children[i]->parent = node;
 				node->children[i]->player = getOtherPlayer(node->player);
 				node->children[i]->type = node->type == OR_NODE ? AND_NODE : OR_NODE;
+				node->children[i]->threats = new Threats(*node->threats);
 				i++;
 			}
 		}
@@ -194,7 +239,7 @@ void PNSearcher::generateAllChildren(PNSearcher::PNSearchNode* node)
 }
 
 PNSearcher::PNSearchNode* PNSearcher::selectMostProvingNode(PNSearcher::PNSearchNode* node) {
-	node->set();
+	//node->set();
 	while (node->expanded) {
 		int i = 0;
 		PNSearchNode* n = node->children[i++];
@@ -215,7 +260,7 @@ PNSearcher::PNSearchNode* PNSearcher::selectMostProvingNode(PNSearcher::PNSearch
 	return node;
 }
 
-PNSearcher::PNSearchNode* PNSearcher::updateAncestors(PNSearcher::PNSearchNode* node, PNSearcher::PNSearchNode* root) {
+PNSearcher::PNSearchNode* PNSearcher::updateAncestors(PNSearcher::PNSearchNode* node) {
 	do {
 		int oldProof = node->proof;
 		int oldDisProof = node->disproof;
@@ -254,18 +299,20 @@ PNSearcher::PNSearchNode::PNSearchNode(AbstractBoard* boardPointer, int x, int y
 	changeX = x;
 	changeY = y;
 	type = OR_NODE;
+	threats = new Threats;
 }
 
 void PNSearcher::PNSearchNode::deleteSubtree() {
 	for (int i = 0; i < childrenAmount; i++)
 		delete children[i];
-	delete children;
+	delete[] children;
 	childrenAmount = 0;
 }
 
 PNSearcher::PNSearchNode::~PNSearchNode()
 {
 	deleteSubtree();
+	delete threats;
 }
 
 void PNSearcher::PNSearchNode::set()
@@ -285,3 +332,4 @@ void PNSearcher::PNSearchNode::unset()
 		board->changePlayer();
 	}
 }
+

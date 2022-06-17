@@ -9,14 +9,6 @@ Board::Board():
 	n(0), m(0), k(0), player(Field::EMPTY), fields(nullptr), emptyFields(0)
 {}
 
-Board::Board(Board& b):
-	n(b.n), m(b.n), k(b.k), player(b.player), fields(createFields(n, m)), emptyFields(b.emptyFields)
-{
-	for (int y = 0; y < b.n; y++)
-		for (int x = 0; x < b.m; x++)
-			fields[y][x] = b.fields[y][x];
-}
-
 Field Board::checkWin()
 {
 	Field win = Field::EMPTY;
@@ -119,7 +111,7 @@ void Board::deleteFields()
 {
 	for (int i = 0; i < n; i++)
 		delete fields[i];
-	delete fields;
+	delete[] fields;
 }
 
 void Board::generateMoves()
@@ -253,6 +245,115 @@ Field Board::solve()
 	return best;
 }
 
+//use after placing the move at pos
+void Board::updateWinningSituationsAt(Point pos, Threats& threats)
+{
+
+
+	for (int i = 0; i < Direction::DIRECTIONS_AMOUNT/2; i++)
+	{
+		Direction d1 = static_cast<Direction::Directions>(i);
+		Direction d2 = static_cast<Direction::Directions>(i + Direction::DIRECTIONS_AMOUNT/2);
+		Point delta1 = { d1.getDX(), d1.getDY() };
+		Point delta2 = { d2.getDX(), d2.getDY() };
+		Point empty1 = { -1, -1 };
+		Point empty2 = { -1, -1 };
+		int length1 = 0;
+		int length2 = 0;
+		int lengthAfterEmpty1 = 0;
+		int lengthAfterEmpty2 = 0;
+
+		for (int i = 1; i < k; i++)
+		{
+			if (!onBoard(pos + delta1 * i))
+				break;;
+			if (at(pos + delta1 * i) == Field::EMPTY)
+			{
+				if (empty1.x == -1 && empty1.y == -1)
+				{
+					empty1 = pos + delta1 * i;
+				}
+				else
+				{
+					break;
+				}
+			}
+			else if (at(pos + delta1 * i) == at(pos))
+			{
+				if (empty1.x != -1 && empty1.y != -1)
+					lengthAfterEmpty1++;
+				else
+					length1++;
+			}
+			else
+				break;
+		}
+		for (int i = 1; i < k; i++)
+		{
+			if (!onBoard(pos + delta2 * i))
+				break;;
+			if (at(pos + delta2 * i) == Field::EMPTY)
+			{
+				if (empty2.x == -1 && empty2.y == -1)
+				{
+					empty2 = pos + delta2 * i;
+				}
+				else
+				{
+					break;
+				}
+			}
+			else if (at(pos + delta2 * i) == at(pos))
+			{
+				if (empty2.x != -1 && empty2.y != -1)
+					lengthAfterEmpty2++;
+				else
+					length2++;
+			}
+			else
+				break;
+		}
+		if (1 + length1 + length2 == (k - 1))
+		{
+			if (empty1.x != -1 && empty1.y != -1)
+				threats.add(new Threat(empty1, at(pos)));
+			if (empty2.x != -1 && empty2.y != -1)
+				threats.add(new Threat(empty2, at(pos)));
+		}
+		if(1 + length1 + lengthAfterEmpty1 == (k-1))
+			if (empty1.x != -1 && empty1.y != -1)
+				threats.add(new Threat(empty1, at(pos)));
+		if(1  + length2 + lengthAfterEmpty2 == (k-1))
+			if (empty2.x != -1 && empty2.y != -1)
+				threats.add(new Threat(empty2, at(pos)));
+		
+	}
+}
+
+void Board::updateAllWinningSituations(Threats& threats)
+{
+	for (int y = 0; y < n; y++)
+		for (int x = 0; x < m; x++)
+			if(!empty(at({x, y})))
+				updateWinningSituationsAt({ x, y }, threats);
+}
+Field Board::checkWinningSituationsSmart(Field currentPlayer, Threats& threats)
+{
+	int p1 = threats.getLengthP1();
+	int p2 = threats.getLengthP2();
+
+	if (p1 > 0 && currentPlayer == Field::P1)
+		return Field::P1;
+	if (p2 > 0 && currentPlayer == Field::P2)
+		return Field::P2;
+
+	if (p1 > 1)
+		return Field::P1;
+	if (p2 > 1)
+		return Field::P2;
+	return Field::EMPTY;
+}
+
 Field Board::checkWinningSituations()
 {
 	Point pos;
@@ -313,11 +414,9 @@ void Board::km1SequencesIncrementer(Field frontField, int frontCounter, Field ba
 	}
 }
 
-void Board::incrementerTryToIncrement(Field f, int& P1km1Sequences, int& P2km1Sequences, bool& p1Incremented, bool& p2Incremented) const
+void Board::incrementerTryToIncrement(Field f, int& P1km1Sequences, int& P2km1Sequences, bool& p1Incremented, bool& p2Incremented)
 {
 	if (f == P1 && p1Incremented == false) {
-		P1km1Sequences++;
-		p1Incremented = true;
 	}
 	else if (f == P2 && p2Incremented == false) {
 		P2km1Sequences++;
@@ -381,11 +480,3 @@ Field Board::getPlayer()
 {
 	return player;
 }
-
-void Board::setPlayer(Field player)
-{
-	this->player = player;
-}
-
-
-

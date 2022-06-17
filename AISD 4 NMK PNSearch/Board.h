@@ -1,7 +1,7 @@
 #pragma once
 #include "AbstractBoard.h"
 #include "PNSearcher.h"
-
+#include "Threat.h"
 
 class Board : AbstractBoard
 {
@@ -15,27 +15,26 @@ public:
 public:
 	Board(int n, int m, int k, Field player);
 	Board();
-	Board(Board& b);
 	Field* operator[](size_t index);
 	const Field* operator[](size_t index) const;
 	void print();
-	Field checkWin();
-	Field checkWinningSituations();
-	Field checkWinAt(Point pos);
-	Field checkWinAround(Point pos);
+	Field checkWin() override;
+	Field checkWinningSituations() override;
+	Field checkWinAt(Point pos) override;
+	Field checkWinAround(Point pos) override;
 	bool onBoard(Point p) const;
 	Field operator[](Point p) const;
 	Field& operator[](Point p);
-	Field& at(Point p);
+	Field& at(Point p) override;
 	int countInDirection(Point p, Point delta);
 	Board& read();
 	void generateMoves();
 	void generateMovesCut();
 	Field solve();
 	void solveGame();
-	Board& set(Point p, Field value);
+	Board& set(Point p, Field value) override;
 	void km1SequencesIncrementer(Field frontField, int frontCounter, Field backField, int backCounter, int& P1km1Sequences, int& P2km1Sequences, bool& p1Incremented, bool& p2Incremented) const;
-	void incrementerTryToIncrement(Field f, int& P1km1Sequences, int& P2km1Sequences, bool& p1Incremented, bool& p2Incremented) const;
+	static void incrementerTryToIncrement(Field f, int& P1km1Sequences, int& P2km1Sequences, bool& p1Incremented, bool& p2Incremented);
 	Field km1SequencesGetWinner(int P1Sequences, int P2Sequences) const;
 	~Board();
 	Field PNSearchSolve();
@@ -47,5 +46,7 @@ public:
 	int getN() override;
 	int getM() override;
 	Field getPlayer() override;
-	void setPlayer(Field player) override;
+	void updateWinningSituationsAt(Point pos, Threats& threats) override;
+	void updateAllWinningSituations(Threats& threats) override;
+	Field checkWinningSituationsSmart(Field currentPlayer, Threats& threats) override;
 };

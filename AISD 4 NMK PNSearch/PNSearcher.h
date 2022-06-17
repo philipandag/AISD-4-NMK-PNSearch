@@ -1,5 +1,6 @@
 #pragma once
 #include "AbstractBoard.h"
+#include "Threat.h"
 
 const int PN_MAX_VALUE = 100000;
 const int PN_MIN_VALUE = 0;
@@ -23,7 +24,6 @@ class PNSearcher {
 		NodeTypes type;
 		bool expanded;
 		PNSearchNode* parent;
-		PNSearchNode* sibling;
 		NodeValues value;
 		int proof;
 		int disproof;
@@ -32,8 +32,9 @@ class PNSearcher {
 		int changeX;
 		int changeY;
 		Field player;
+		Threats* threats;
 
-		PNSearchNode(AbstractBoard* board, int x = -1, int y = -1);
+		PNSearchNode(AbstractBoard* boardPointer, int x = -1, int y = -1);
 		~PNSearchNode();
 		void deleteSubtree();
 		void set();
@@ -45,15 +46,16 @@ class PNSearcher {
 	Field firstPlayer;
 public:
 	PNSearcher(AbstractBoard* board);
+	~PNSearcher();
 
 	Field solve();
 private:
 	void evaluate(PNSearchNode* node);
 	void expandNode(PNSearchNode* node);
-	void setProofAndDisproofNumbers(PNSearchNode* node);
-	bool PNDraw(PNSearchNode* root);
-	void generateAllChildren(PNSearchNode* node);
-	void PN(PNSearchNode* root);
+	static void setProofAndDisproofNumbers(PNSearchNode* node);
+	bool PNDraw(PNSearchNode* node);
+	static void generateAllChildren(PNSearchNode* node);
+	void PN();
 	PNSearchNode* selectMostProvingNode(PNSearchNode* node);
-	PNSearchNode* updateAncestors(PNSearchNode* node, PNSearchNode* root);
+	PNSearchNode* updateAncestors(PNSearchNode* node);
 };
