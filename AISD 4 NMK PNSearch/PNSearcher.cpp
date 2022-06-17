@@ -195,22 +195,22 @@ void PNSearcher::generateAllChildren(PNSearcher::PNSearchNode* node)
 	Threat* current = nullptr;
 	if (node->player == Field::P1)
 	{
-		length = node->threats->getLengthP1();
-		current = node->threats->getRootP1();
-		if (length == 0)
-		{
-			length = node->threats->getLengthP2();
-			current = node->threats->getRootP2();
-		}
-	}
-	else if (node->player == Field::P2)
-	{
 		length = node->threats->getLengthP2();
 		current = node->threats->getRootP2();
 		if (length == 0)
 		{
 			length = node->threats->getLengthP1();
 			current = node->threats->getRootP1();
+		}
+	}
+	else if (node->player == Field::P2)
+	{
+		length = node->threats->getLengthP1();
+		current = node->threats->getRootP1();
+		if (length == 0)
+		{
+			length = node->threats->getLengthP2();
+			current = node->threats->getRootP2();
 		}
 	}
 	if (length > 0)

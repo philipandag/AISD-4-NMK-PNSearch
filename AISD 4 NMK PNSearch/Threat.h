@@ -9,12 +9,9 @@ public:
 	Threat* next;
 	Threat* previous;
 
-	Threat(Point p, Field pl) {
-		pos = p;
-		player = pl;
-		next = nullptr;
-		previous = nullptr;
-	}
+	Threat(Point p, Field pl):
+	pos(p), player(pl), next(nullptr), previous(nullptr) 
+	{}
 	Threat(const Threat* other) {
 		pos = other->pos;
 		player = other->player;
